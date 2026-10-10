@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Siri Visuale</title>
+  <meta name="description" content="Replica visiva ispirata a Siri con attivazione manuale, microfono su richiesta e AI esterna opzionale." />
+
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Siri" />
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link id="appleTouch-icon" rel="apple-touch-icon" href="icon.svg" />
+
+  <script>
+    (function () {
+      try {
+        fetch('apple-touch-icon.png', { method: 'HEAD', cache: 'no-store' })
+          .then(function (r) {
+            if (r && r.ok) {
+              var l = document.getElementById('appleTouch-icon');
+              if (l) l.setAttribute('href', 'apple-touch-icon.png');
+            }
+          })
+          .catch(function () {});
+      } catch (e) {}
+    })();
+  </script>
+
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      color: #f5f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+      color: inherit;
+    }
+
+    input, select, textarea {
+      font-size: 16px;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    .icon-btn {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      right: max(12px, env(safe-area-inset-right));
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(28, 28, 30, 0.5);
+      -webkit-backdrop-filter: saturate(140%) blur(16px);
+      backdrop-filter: saturate(140%) blur(16px);
+      color: #fff;
+      font-size: 18px;
+      line-height: 1;
+      z-index: 10;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .orb-wrap {
+      flex: 1 1 auto;
+      width: 100%;
+      display: grid;
+      place-items: center;
+      position: relative;
+      min-height: 0;
+    }
+
+    .orb {
+      position: relative;
+      width: min(76vmin, 430px);
+      aspect-ratio: 1 / 1;
+      isolation: isolate;
+      transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1), filter 0.45s ease;
+      filter: saturate(115%);
+    }
+
+    .layer {
+      position: absolute;
+      inset: 4%;
+      border-radius: 50%;
+      filter: blur(28px);
+      mix-blend-mode: screen;
+      opacity: 0.78;
+      transform-origin: 50% 50%;
+      animation: drift 16s ease-in-out infinite;
+      will-change: transform, opacity;
+    }
+
+    .l1 {
+      background: radial-gradient(circle at 30% 30%, rgba(255, 45, 85, 0.95), rgba(255, 45, 85, 0) 62%);
+      animation-delay: 0s;
+    }
+
+    .l2 {
+      background: radial-gradient(circle at 70% 35%, rgba(10, 132, 255, 0.95), rgba(10, 132, 255, 0) 64%);
+      animation-delay: -3s;
+    }
+
+    .l3 {
+      background: radial-gradient(circle at 45% 75%, rgba(191, 90, 242, 0.92), rgba(191, 90, 242, 0) 63%);
+      animation-delay: -6s;
+    }
+
+    .l4 {
+      background: radial-gradient(circle at 75% 70%, rgba(255, 159, 10, 0.88), rgba(255, 159, 10, 0) 60%);
+      animation-delay: -9s;
+    }
+
+    .l5 {
+      background: radial-gradient(circle at 50% 50%, rgba(100, 210, 255, 0.78), rgba(100, 210, 255, 0) 58%);
+      animation-delay: -12s;
+    }
+
+    .core {
+      position: absolute;
+      inset: 25%;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.18) 38%, transparent 68%);
+      filter: blur(8px);
+      opacity: 0.72;
+      animation: pulse 4.2s ease-in-out infinite;
+      will-change: transform, opacity;
+    }
+
+    .ring {
+      position: absolute;
+      inset: 1%;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.05);
+      pointer-events: none;
+    }
+
+    body.listening .orb {
+      transform: scale(1.055);
+    }
+
+    body.listening .layer {
+      animation-duration: 6s;
+      opacity: 0.95;
+    }
+
+    body.thinking .orb {
+      transform: scale(0.97) rotate(0.5deg);
+    }
+
+    body.thinking .core {
+      animation-duration: 1.2s;
+    }
+
+    .ui {
+      width: min(680px, calc(100% - 32px));
+      padding: 10px 0 18px;
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+    }
+
+    .status {
+      min-height: 1.25em;
+      font-size: 14px;
+      color: #98989d;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    .transcript,
+    .answer {
+      width: 100%;
+      max-height: 24vh;
+      max-height: 24dvh;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 16px;
+      border-radius: 22px;
+      background: rgba(28, 28, 30, 0.58);
+      -webkit-backdrop-filter: saturate(140%) blur(18px);
+      backdrop-filter: saturate(140%) blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 17px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .transcript:empty {
+      display: none;
+    }
+
+    .answer {
+      display: none;
+      color: #e8e8ed;
+    }
+
+    .answer.show {
+      display: block;
+      animation: fadeUp 0.35s ease;
+    }
+
+    .talk-btn {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 0;
+      width: min(320px, 82vw);
+      min-height: 58px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      -webkit-backdrop-filter: saturate(140%) blur(20px);
+      backdrop-filter: saturate(140%) blur(20px);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      transition: transform 0.15s ease, background 0.2s ease, opacity 0.2s ease;
+    }
+
+    .talk-btn:active {
+      transform: scale(0.97);
+    }
+
+    .talk-btn:disabled {
+      opacity: 0.45;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.45);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      padding: 12px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .modal.open {
+      display: flex;
+    }
+
+    .sheet {
+      width: min(680px, 100%);
+      max-height: calc(100dvh - 24px);
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      background: rgba(20, 20, 22, 0.92);
+      -webkit-backdrop-filter: saturate(140%) blur(22px);
+      backdrop-filter: saturate(140%) blur(22px);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 28px;
+      padding: 20px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    }
+
+    .sheet h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .hint,
+    .warn {
+      font-size: 13px;
+      line-height: 1.35;
+      color: #a8a8ad;
+      margin: 8px 0;
+    }
+
+    .warn {
+      color: #ffd60a;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin: 12px 0;
+    }
+
+    .field.inline label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: rgba(10, 132, 255, 0.8);
+      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.2);
+    }
+
+    fieldset {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 14px;
+      margin: 14px 0 0;
+    }
+
+    legend {
+      padding: 0 6px;
+      font-weight: 600;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .row button {
+      flex: 1 1 auto;
+      min-height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.10);
+      color: #fff;
+      padding: 10px 14px;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .row button.primary {
+      background: #0a84ff;
+      border-color: #0a84ff;
+      color: #fff;
+    }
+
+    .row button.danger {
+      background: rgba(255, 69, 58, 0.18);
+      border-color: rgba(255, 69, 58, 0.45);
+      color: #ff9f9a;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(96px + env(safe-area-inset-bottom));
+      transform: translateX(-50%) translateY(20px);
+      max-width: 90vw;
+      padding: 12px 16px;
+      border-radius: 18px;
+      background: rgba(28, 28, 30, 0.92);
+      -webkit-backdrop-filter: saturate(140%) blur(18px);
+      backdrop-filter: saturate(140%) blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-size: 14px;
+      line-height: 1.3;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 30;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @keyframes drift {
+      0%, 100% {
+        transform: translate3d(-5%, -4%, 0) scale(1) rotate(0deg);
+      }
+      25% {
+        transform: translate3d(7%, 3%, 0) scale(1.08) rotate(4deg);
+      }
+      50% {
+        transform: translate3d(-2%, 8%, 0) scale(0.95) rotate(-3deg);
+      }
+      75% {
+        transform: translate3d(-8%, -2%, 0) scale(1.04) rotate(2deg);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.72;
+      }
+      50% {
+        transform: scale(1.06);
+        opacity: 0.9;
+      }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .layer,
+      .core {
+        animation: none !important;
+      }
+
+      .orb,
+      .answer.show {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <button id="settingsBtn" class="icon-btn" type="button" aria-label="Apri impostazioni">⚙︎</button>
+
+    <div class="orb-wrap">
+      <div id="orb" class="orb" aria-hidden="true">
+        <span class="layer l1"></span>
+        <span class="layer l2"></span>
+        <span class="layer l3"></span>
+        <span class="layer l4"></span>
+        <span class="layer l5"></span>
+        <span class="core"></span>
+        <span class="ring"></span>
+      </div>
+    </div>
+
+    <main class="ui">
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div id="transcript" class="transcript" aria-live="polite"></div>
+      <div id="answer" class="answer" aria-live="polite"></div>
+      <button id="talkBtn" class="talk-btn" type="button">Tocca per parlare</button>
+    </main>
+  </div>
+
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="sheet">
+      <h2 id="modalTitle">Impostazioni</h2>
+      <p class="hint">
+        Nessun account nell’interfaccia. Nessun tracciamento pubblicitario. Preferenze e chiave API, se inserita, restano solo in localStorage su questo iPhone.
+      </p>
+
+      <div class="field">
+        <label for="lang">Lingua riconoscimento vocale</label>
+        <select id="lang">
+          <option value="it-IT">Italiano (Italia)</option>
+          <option value="en-US">English (US)</option>
+          <option value="en-GB">English (UK)</option>
+          <option value="es-ES">Español (España)</option>
+          <option value="fr-FR">Français (France)</option>
+          <option value="de-DE">Deutsch (Deutschland)</option>
+        </select>
+      </div>
+
+      <fieldset>
+        <legend>AI esterna opzionale</legend>
+
+        <div class="field inline">
+          <label>
+            <input id="aiEnabled" type="checkbox" />
+            Abilita risposte AI
+          </label>
+        </div>
+
+        <div class="field">
+          <label for="aiBase">Endpoint OpenAI-compatible</label>
+          <input
+            id="aiBase"
+            type="url"
+            inputmode="url"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="https://api.example.com/v1"
+          />
+        </div>
+
+        <div class="field">
+          <label for="aiModel">Modello</label>
+          <input
+            id="aiModel"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Es. nome modello fornito dal servizio"
+          />
+        </div>
+
+        <div class="field">
+          <label for="aiKey">Chiave API (opzionale se usi un proxy)</label>
+          <input
+            id="aiKey"
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Inserisci solo se necessario"
+          />
+        </div>
+
+        <p class="warn">
+          Attenzione: il servizio AI è esterno e può avere costi, limiti o politiche diverse. Questa app non include chiavi.
+          Se inserisci una chiave, viene salvata solo su questo dispositivo e inviata direttamente all’endpoint configurato.
+          Usala solo per uso personale su dispositivo fidato. Per maggiore sicurezza, usa un proxy backend che non esponga la chiave nel client.
+        </p>
+
+        <div class="row">
+          <button id="saveBtn" class="primary" type="button">Salva</button>
+          <button id="testAiBtn" type="button">Prova AI</button>
+          <button id="testSoundBtn" type="button">Test audio</button>
+          <button id="clearBtn" class="danger" type="button">Cancella dati</button>
+          <button id="closeBtn" type="button">Chiudi</button>
+        </div>
+      </fieldset>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'siriClone.prefs.v1';
+
+      const defaults = {
+        lang: 'it-IT',
+        aiEnabled: false,
+        aiBaseUrl: '',
+        aiModel: '',
+        aiKey: '',
+        sound: true,
+        timeout: 20
+      };
+
+      const els = {
+        status: document.getElementById('status'),
+        talk: document.getElementById('talkBtn'),
+        settingsBtn: document.getElementById('settingsBtn'),
+        modal: document.getElementById('modal'),
+        closeBtn: document.getElementById('closeBtn'),
+        saveBtn: document.getElementById('saveBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        testAiBtn: document.getElementById('testAiBtn'),
+        testSoundBtn: document.getElementById('testSoundBtn'),
+        lang: document.getElementById('lang'),
+        aiEnabled: document.getElementById('aiEnabled'),
+        aiBase: document.getElementById('aiBase'),
+        aiModel: document.getElementById('aiModel'),
+        aiKey: document.getElementById('aiKey'),
+        transcript: document.getElementById('transcript'),
+        answer: document.getElementById('answer'),
+        toast: document.getElementById('toast')
+      };
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      let prefs = loadPrefs();
+      let recognition = null;
+      let listening = false;
+      let finalText = '';
+      let speechError = null;
+      let toastTimer = 0;
+      let audioCtx = null;
+
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        navigator.standalone === true;
+
+      init();
+
+      function init() {
+        if (isStandalone) document.documentElement.classList.add('standalone');
+
+        applyPrefsToForm();
+        setupRecognition();
+        bindEvents();
+        registerServiceWorker();
+        updateConnectivity();
+        updateTalkButton();
+
+        setStatus(
+          SpeechRecognition
+            ? 'Pronto. Tocca per attivare.'
+            : 'Animazione pronta. Riconoscimento vocale non disponibile in questo browser.'
+        );
+
+        if (prefs.aiEnabled && (!prefs.aiBaseUrl || !prefs.aiModel)) {
+          setStatus('AI attivata ma incompleta: apri le impostazioni.');
+        }
+      }
+
+      function loadPrefs() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return { ...defaults };
+          const parsed = JSON.parse(raw);
+          return normalizePrefs(parsed);
+        } catch (e) {
+          return { ...defaults };
+        }
+      }
+
+      function normalizePrefs(p) {
+        const out = { ...defaults, ...(p || {}) };
+
+        out.lang = typeof out.lang === 'string' && out.lang ? out.lang : defaults.lang;
+        out.aiEnabled = !!out.aiEnabled;
+        out.aiBaseUrl = typeof out.aiBaseUrl === 'string' ? out.aiBaseUrl.trim() : '';
+        out.aiModel = typeof out.aiModel === 'string' ? out.aiModel.trim() : '';
+        out.aiKey = typeof out.aiKey === 'string' ? out.aiKey.trim() : '';
+        out.sound = out.sound !== false;
+
+        const t = Number(out.timeout);
+        out.timeout = Number.isFinite(t) && t > 0 ? Math.min(Math.max(t, 5), 120) : defaults.timeout;
+
+        return out;
+      }
+
+      function savePrefsToStorage() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+          return true;
+        } catch (e) {
+          showToast('Impossibile salvare in locale: archiviazione non disponibile.');
+          return false;
+        }
+      }
+
+      function applyPrefsToForm() {
+        els.lang.value = prefs.lang;
+        els.aiEnabled.checked = prefs.aiEnabled;
+        els.aiBase.value = prefs.aiBaseUrl;
+        els.aiModel.value = prefs.aiModel;
+        els.aiKey.value = prefs.aiKey;
+
+        if (recognition) recognition.lang = prefs.lang;
+      }
+
+      function readFormToPrefs() {
+        prefs.lang = els.lang.value || 'it-IT';
+        prefs.aiEnabled = !!els.aiEnabled.checked;
+        prefs.aiBaseUrl = els.aiBase.value.trim();
+        prefs.aiModel = els.aiModel.value.trim();
+        prefs.aiKey = els.aiKey.value.trim();
+        prefs = normalizePrefs(prefs);
+      }
+
+      function setupRecognition() {
+        if (!SpeechRecognition) return;
+
+        recognition = new SpeechRecognition();
+        recognition.lang = prefs.lang;
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          listening = true;
+          speechError = null;
+          document.body.classList.add('listening');
+          updateTalkButton();
+          setStatus('In ascolto…');
+          playTone(660, 0.05);
+        };
+
+        recognition.onresult = (event) => {
+          let interim = '';
+          let addedFinal = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i += 1) {
+            const result = event.results[i];
+            const text = result[0] ? result[0].transcript : '';
+
+            if (result.isFinal) {
+              addedFinal += text + ' ';
+            } else {
+              interim += text;
+            }
+          }
+
+          if (addedFinal) {
+            finalText = (finalText + ' ' + addedFinal).trim();
+          }
+
+          const shown = [finalText, interim].filter(Boolean).join(' ').trim();
+          els.transcript.textContent = shown;
+        };
+
+        recognition.onerror = (event) => {
+          speechError = event.error || 'unknown';
+          handleSpeechError(speechError);
+        };
+
+        recognition.onend = () => {
+          listening = false;
+          document.body.classList.remove('listening');
+          updateTalkButton();
+          playTone(440, 0.05);
+
+          if (speechError) {
+            speechError = null;
+            finalText = '';
+            return;
+          }
+
+          const question = finalText.trim();
+          finalText = '';
+
+          if (!question) {
+            setStatus('Nessun riconoscimento. Riprova.');
+            return;
+          }
+
+          els.transcript.textContent = question;
+
+          if (prefs.aiEnabled) {
+            processAI(question);
+          } else {
+            setStatus('Trascrizione completata. AI disattivata.');
+          }
+        };
+      }
+
+      function handleSpeechError(error) {
+        let msg = 'Errore durante il riconoscimento vocale.';
+
+        if (error === 'not-allowed' || error === 'service-not-allowed') {
+          msg = 'Permesso microfono negato o servizio non disponibile. Controlla i permessi di Safari/microfono e riprova toccando il pulsante.';
+        } else if (error === 'no-speech') {
+          msg = 'Nessuna voce rilevata.';
+        } else if (error === 'network') {
+          msg = 'Rete instabile: il riconoscimento vocale potrebbe non funzionare.';
+        } else if (error === 'audio-capture') {
+          msg = 'Microfono non trovato o non utilizzabile.';
+        } else if (error === 'aborted') {
+          msg = 'Ascolto interrotto.';
+        }
+
+        setStatus(msg);
+        showToast(msg);
+      }
+
+      function toggleListening() {
+        if (!recognition) {
+          showToast('Riconoscimento vocale non supportato in questo browser.');
+          return;
+        }
+
+        if (listening) {
+          try {
+            recognition.stop();
+          } catch (e) {}
+          return;
+        }
+
+        finalText = '';
+        speechError = null;
+        els.transcript.textContent = '';
+        hideAnswer();
+
+        try {
+          recognition.lang = prefs.lang;
+          recognition.start();
+        } catch (e) {
+          setStatus('Impossibile avviare il microfono: ' + (e && e.message ? e.message : 'errore sconosciuto'));
+        }
+      }
+
+      function updateTalkButton() {
+        if (!SpeechRecognition) {
+          els.talk.disabled = true;
+          els.talk.textContent = 'Vocale non supportato';
+          return;
+        }
+
+        els.talk.disabled = false;
+        els.talk.textContent = listening ? 'Stop ascolto' : 'Tocca per parlare';
+      }
+
+      function setStatus(text) {
+        els.status.textContent = text;
+      }
+
+      function showToast(text) {
+        els.toast.textContent = text;
+        els.toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => els.toast.classList.remove('show'), 3600);
+      }
+
+      function hideAnswer() {
+        els.answer.classList.remove('show');
+        els.answer.textContent = '';
+      }
+
+      function bindEvents() {
+        els.talk.addEventListener('click', toggleListening);
+        els.settingsBtn.addEventListener('click', openModal);
+        els.closeBtn.addEventListener('click', closeModal);
+        els.saveBtn.addEventListener('click', saveSettings);
+        els.clearBtn.addEventListener('click', clearLocalData);
+        els.testAiBtn.addEventListener('click', testAI);
+        els.testSoundBtn.addEventListener('click', () => {
+          playTone(880, 0.08);
+          showToast('Test audio locale inviato.');
+        });
+
+        els.modal.addEventListener('click', (event) => {
+          if (event.target === els.modal) closeModal();
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && els.modal.classList.contains('open')) {
+            closeModal();
+          }
+        });
+
+        window.addEventListener('online', updateConnectivity);
+        window.addEventListener('offline', updateConnectivity);
+      }
+
+      function openModal() {
+        applyPrefsToForm();
+        els.modal.classList.add('open');
+        els.modal.setAttribute('aria-hidden', 'false');
+        els.closeBtn.focus();
+      }
+
+      function closeModal() {
+        els.modal.classList.remove('open');
+        els.modal.setAttribute('aria-hidden', 'true');
+        els.settingsBtn.focus();
+      }
+
+      function saveSettings() {
+        readFormToPrefs();
+
+        if (prefs.aiEnabled) {
+          if (!/^https:\/\//i.test(prefs.aiBaseUrl)) {
+            showToast('Per usare HTTPS dall’iPhone, l’endpoint AI deve iniziare con https://');
+            return;
+          }
+
+          if (!prefs.aiModel) {
+            showToast('Indica un modello AI per abilitare le risposte.');
+            return;
+          }
+        }
+
+        if (savePrefsToStorage()) {
+          applyPrefsToForm();
+          showToast('Impostazioni salvate localmente.');
+          setStatus(
+            prefs.aiEnabled
+              ? 'AI esterna configurata.'
+              : 'AI disattivata. Solo animazione e riconoscimento vocale se supportato.'
+          );
+        }
+      }
+
+      function clearLocalData() {
+        if (!window.confirm('Cancellare preferenze e chiave API salvate su questo dispositivo?')) return;
+
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {}
+
+        prefs = { ...defaults };
+        applyPrefsToForm();
+        hideAnswer();
+        els.transcript.textContent = '';
+        setStatus('Dati locali cancellati.');
+        showToast('Dati locali cancellati.');
+      }
+
+      async function testAI() {
+        if (!prefs.aiEnabled || !prefs.aiBaseUrl || !prefs.aiModel) {
+          showToast('Configura prima endpoint e modello AI.');
+          return;
+        }
+
+        closeModal();
+        await processAI('Rispondi soltanto con: OK');
+      }
+
+      async function processAI(text) {
+        document.body.classList.add('thinking');
+        setStatus('Elaborazione risposta AI…');
+
+        try {
+          const result = await callAI(text);
+
+          if (result.ok) {
+            els.answer.textContent = result.content;
+            els.answer.classList.add('show');
+            setStatus('Risposta ricevuta.');
+          } else {
+            setStatus(result.reason);
+            showToast(result.reason);
+          }
+        } catch (e) {
+          const msg = 'Errore imprevisto AI: ' + (e && e.message ? e.message : 'sconosciuto');
+          setStatus(msg);
+          showToast(msg);
+        } finally {
+          document.body.classList.remove('thinking');
+        }
+      }
+
+      async function callAI(userText) {
+        if (!prefs.aiEnabled) return { ok: false, reason: 'AI disattivata.' };
+        if (!/^https:\/\//i.test(prefs.aiBaseUrl)) return { ok: false, reason: 'Endpoint AI non valido: serve https://.' };
+        if (!prefs.aiModel) return { ok: false, reason: 'Modello AI non impostato.' };
+        if (!navigator.onLine) return { ok: false, reason: 'Nessuna connessione: risposta AI non generata.' };
+
+        let url = prefs.aiBaseUrl.replace(/\/+$/, '');
+        if (!/\/chat\/completions$/i.test(url)) url += '/chat/completions';
+
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+
+        if (prefs.aiKey) {
+          headers.Authorization = 'Bearer ' + prefs.aiKey;
+        }
+
+        const payload = {
+          model: prefs.aiModel,
+          messages: [
+            {
+              role: 'system',
+              content: 'Sei un assistente vocale. Rispondi in italiano in modo chiaro, breve e utile.'
+            },
+            {
+              role: 'user',
+              content: userText
+            }
+          ],
+          temperature: 0.7,
+          stream: false
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), prefs.timeout * 1000);
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+            signal: controller.signal
+          });
+
+          const data = await response.json().catch(() => null);
+
+          if (!response.ok) {
+            const apiMsg =
+              data && data.error && data.error.message
+                ? data.error.message
+                : 'HTTP ' + response.status;
+
+            return {
+              ok: false,
+              reason: 'Il servizio AI ha rifiutato la richiesta: ' + apiMsg
+            };
+          }
+
+          const content =
+            data &&
+            data.choices &&
+            data.choices[0] &&
+            data.choices[0].message &&
+            data.choices[0].message.content;
+
+          if (!content) {
+            return { ok: false, reason: 'Risposta AI vuota o formato non supportato.' };
+          }
+
+          return { ok: true, content: String(content).trim() };
+        } catch (err) {
+          if (err && err.name === 'AbortError') {
+            return { ok: false, reason: 'Tempo scaduto: il servizio AI non ha risposto.' };
+          }
+
+          if (err instanceof TypeError) {
+            return {
+              ok: false,
+              reason: 'Impossibile raggiungere il servizio AI (rete, CORS o endpoint non valido).'
+            };
+          }
+
+          return {
+            ok: false,
+            reason: 'Errore locale durante la richiesta AI: ' + (err && err.message ? err.message : 'sconosciuto')
+          };
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      function playTone(frequency, duration) {
+        if (!prefs.sound) return;
+
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return;
+
+          audioCtx = audioCtx || new Ctx();
+
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.value = frequency;
+
+          gain.gain.value = 0.035;
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          const now = audioCtx.currentTime;
+          osc.start(now);
+          gain.gain.setValueAtTime(0.035, now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+          osc.stop(now + duration + 0.02);
+        } catch (e) {}
+      }
+
+      function updateConnectivity() {
+        const online = navigator.onLine;
+        document.body.classList.toggle('offline', !online);
+
+        if (!online) {
+          setStatus('Offline: animazione e impostazioni locali funzionano; AI e riconoscimento vocale potrebbero non funzionare.');
+        }
+      }
+
+      async function registerServiceWorker() {
+        if (!('serviceWorker' in navigator) || location.protocol !== 'https:') return;
+
+        try {
+          await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        } catch (e) {
+          console.warn('Service worker non registrato:', e);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
